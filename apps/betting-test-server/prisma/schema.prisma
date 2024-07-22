@@ -1,0 +1,62 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DB_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Bet {
+  id        String         @id @default(cuid())
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  amount    Float?
+  odds      Float?
+  status    EnumBetStatus?
+  user      User?          @relation(fields: [userId], references: [id])
+  userId    String?
+  event     Event?         @relation(fields: [eventId], references: [id])
+  eventId   String?
+}
+
+model Event {
+  id        String          @id @default(cuid())
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  date      DateTime?
+  sport     EnumEventSport?
+  name      String?
+  team1     String?
+  team2     String?
+  bets      Bet[]
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  name      String?
+  city      String?
+}
+
+model User {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  firstName String?
+  lastName  String?
+  username  String   @unique
+  email     String?  @unique
+  password  String
+  roles     Json
+  bets      Bet[]
+}
+
+enum EnumBetStatus {
+  Option1
+}
+
+enum EnumEventSport {
+  Option1
+}
