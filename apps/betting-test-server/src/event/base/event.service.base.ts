@@ -11,6 +11,8 @@ https://docs.amplication.com/how-to/custom-code
   */
 import { PrismaService } from "../../prisma/prisma.service";
 import { Prisma, Event as PrismaEvent, Bet as PrismaBet } from "@prisma/client";
+import { CreateEventInput } from "../CreateEventInput";
+import { Event } from "./Event";
 
 export class EventServiceBase {
   constructor(protected readonly prisma: PrismaService) {}
@@ -44,5 +46,8 @@ export class EventServiceBase {
         where: { id: parentId },
       })
       .bets(args);
+  }
+  async CreateNewEvent(args: CreateEventInput): Promise<Event> {
+    throw new Error("Not implemented");
   }
 }

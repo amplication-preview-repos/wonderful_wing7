@@ -16,17 +16,36 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { BetService } from "../bet.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { BetCreateInput } from "./BetCreateInput";
 import { Bet } from "./Bet";
 import { BetFindManyArgs } from "./BetFindManyArgs";
 import { BetWhereUniqueInput } from "./BetWhereUniqueInput";
 import { BetUpdateInput } from "./BetUpdateInput";
+import { CreateBetInput } from "../CreateBetInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class BetControllerBase {
-  constructor(protected readonly service: BetService) {}
+  constructor(
+    protected readonly service: BetService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: Bet })
+  @nestAccessControl.UseRoles({
+    resource: "Bet",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createBet(@common.Body() data: BetCreateInput): Promise<Bet> {
     return await this.service.createBet({
       data: {
@@ -67,9 +86,18 @@ export class BetControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [Bet] })
   @ApiNestedQuery(BetFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Bet",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async bets(@common.Req() request: Request): Promise<Bet[]> {
     const args = plainToClass(BetFindManyArgs, request.query);
     return this.service.bets({
@@ -97,9 +125,18 @@ export class BetControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: Bet })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Bet",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async bet(@common.Param() params: BetWhereUniqueInput): Promise<Bet | null> {
     const result = await this.service.bet({
       where: params,
@@ -132,9 +169,18 @@ export class BetControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: Bet })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Bet",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateBet(
     @common.Param() params: BetWhereUniqueInput,
     @common.Body() data: BetUpdateInput
@@ -191,6 +237,14 @@ export class BetControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: Bet })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Bet",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteBet(
     @common.Param() params: BetWhereUniqueInput
   ): Promise<Bet | null> {
@@ -226,5 +280,39 @@ export class BetControllerBase {
       }
       throw error;
     }
+  }
+
+  @common.Get("/bets/:id/status")
+  @swagger.ApiOkResponse({
+    type: Bet,
+  })
+  @swagger.ApiNotFoundResponse({
+    type: errors.NotFoundException,
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
+  async GetBetStatus(
+    @common.Body()
+    body: CreateBetInput
+  ): Promise<Bet> {
+    return this.service.GetBetStatus(body);
+  }
+
+  @common.Post("/place-bet")
+  @swagger.ApiOkResponse({
+    type: Bet,
+  })
+  @swagger.ApiNotFoundResponse({
+    type: errors.NotFoundException,
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
+  async PlaceBet(
+    @common.Body()
+    body: CreateBetInput
+  ): Promise<Bet> {
+    return this.service.PlaceBet(body);
   }
 }

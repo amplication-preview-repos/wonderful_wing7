@@ -16,6 +16,9 @@ import {
   User as PrismaUser,
   Event as PrismaEvent,
 } from "@prisma/client";
+import { BetUniqueInput } from "../BetUniqueInput";
+import { Bet } from "./Bet";
+import { CreateBetInput } from "../CreateBetInput";
 
 export class BetServiceBase {
   constructor(protected readonly prisma: PrismaService) {}
@@ -54,5 +57,11 @@ export class BetServiceBase {
         where: { id: parentId },
       })
       .event();
+  }
+  async GetBetStatus(args: BetUniqueInput): Promise<Bet> {
+    throw new Error("Not implemented");
+  }
+  async PlaceBet(args: CreateBetInput): Promise<Bet> {
+    throw new Error("Not implemented");
   }
 }

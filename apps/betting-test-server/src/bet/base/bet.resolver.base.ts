@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { Bet } from "./Bet";
 import { BetCountArgs } from "./BetCountArgs";
 import { BetFindManyArgs } from "./BetFindManyArgs";
@@ -22,11 +28,23 @@ import { UpdateBetArgs } from "./UpdateBetArgs";
 import { DeleteBetArgs } from "./DeleteBetArgs";
 import { User } from "../../user/base/User";
 import { Event } from "../../event/base/Event";
+import { BetUniqueInput } from "../BetUniqueInput";
+import { CreateBetInput } from "../CreateBetInput";
 import { BetService } from "../bet.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => Bet)
 export class BetResolverBase {
-  constructor(protected readonly service: BetService) {}
+  constructor(
+    protected readonly service: BetService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "Bet",
+    action: "read",
+    possession: "any",
+  })
   async _betsMeta(
     @graphql.Args() args: BetCountArgs
   ): Promise<MetaQueryPayload> {
@@ -36,12 +54,24 @@ export class BetResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [Bet])
+  @nestAccessControl.UseRoles({
+    resource: "Bet",
+    action: "read",
+    possession: "any",
+  })
   async bets(@graphql.Args() args: BetFindManyArgs): Promise<Bet[]> {
     return this.service.bets(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => Bet, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "Bet",
+    action: "read",
+    possession: "own",
+  })
   async bet(@graphql.Args() args: BetFindUniqueArgs): Promise<Bet | null> {
     const result = await this.service.bet(args);
     if (result === null) {
@@ -50,7 +80,13 @@ export class BetResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Bet)
+  @nestAccessControl.UseRoles({
+    resource: "Bet",
+    action: "create",
+    possession: "any",
+  })
   async createBet(@graphql.Args() args: CreateBetArgs): Promise<Bet> {
     return await this.service.createBet({
       ...args,
@@ -72,7 +108,13 @@ export class BetResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Bet)
+  @nestAccessControl.UseRoles({
+    resource: "Bet",
+    action: "update",
+    possession: "any",
+  })
   async updateBet(@graphql.Args() args: UpdateBetArgs): Promise<Bet | null> {
     try {
       return await this.service.updateBet({
@@ -104,6 +146,11 @@ export class BetResolverBase {
   }
 
   @graphql.Mutation(() => Bet)
+  @nestAccessControl.UseRoles({
+    resource: "Bet",
+    action: "delete",
+    possession: "any",
+  })
   async deleteBet(@graphql.Args() args: DeleteBetArgs): Promise<Bet | null> {
     try {
       return await this.service.deleteBet(args);
@@ -117,9 +164,15 @@ export class BetResolverBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => User, {
     nullable: true,
     name: "user",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "User",
+    action: "read",
+    possession: "any",
   })
   async getUser(@graphql.Parent() parent: Bet): Promise<User | null> {
     const result = await this.service.getUser(parent.id);
@@ -130,9 +183,15 @@ export class BetResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => Event, {
     nullable: true,
     name: "event",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "Event",
+    action: "read",
+    possession: "any",
   })
   async getEvent(@graphql.Parent() parent: Bet): Promise<Event | null> {
     const result = await this.service.getEvent(parent.id);
@@ -141,5 +200,21 @@ export class BetResolverBase {
       return null;
     }
     return result;
+  }
+
+  @graphql.Query(() => Bet)
+  async GetBetStatus(
+    @graphql.Args()
+    args: BetUniqueInput
+  ): Promise<Bet> {
+    return this.service.GetBetStatus(args);
+  }
+
+  @graphql.Mutation(() => Bet)
+  async PlaceBet(
+    @graphql.Args()
+    args: CreateBetInput
+  ): Promise<Bet> {
+    return this.service.PlaceBet(args);
   }
 }
